@@ -18,11 +18,11 @@ def show_menu():
     return input("Choose an option: ")
 
 def hash_generator_tool():
-    import hash_generator  # Importing inside function to avoid unnecessary memory usage
+    from modules import hash_generator  # Importing using the correct module path
     hash_generator.main()
 
 def password_analyzer_tool():
-    import pwd_analyzer
+    from modules import pwd_analyzer
     pwd_analyzer.run_main()  # Import inside function to prevent unwanted execution
 
 def totp_tool():
