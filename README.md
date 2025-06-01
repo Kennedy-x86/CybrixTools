@@ -1,4 +1,4 @@
-# OpenCyb3r
+# CybrixTools
 
 Welcome to **OpenCyb3r**, an open-source cybersecurity tool suite designed to help students and beginners contribute to open-source projects while learning practical cybersecurity concepts.
 
