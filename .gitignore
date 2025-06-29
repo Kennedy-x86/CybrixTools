@@ -6,3 +6,4 @@
 *.pyd
 __pycache__/
 *.log
+modules/totp_secret.json
