@@ -2,7 +2,12 @@ import customtkinter as ctk
 import subprocess
 import os
 from pathlib import Path
-from modules import hash_generator, pwd_analyzer
+from modules import hash_generator, pwd_analyzer, totp_generator
+import qrcode
+from PIL import Image, ImageTk
+import io
+import threading
+import time
 
 # Set theme
 ctk.set_appearance_mode("Dark")
@@ -41,7 +46,7 @@ class CybrixToolsApp(ctk.CTk):
 
         ctk.CTkButton(self.sidebar, text="Hash Generator", width=180, command=self.run_hash_generator).pack(pady=5)
         ctk.CTkButton(self.sidebar, text="Password Analyzer", width=180, command=self.run_password_analyzer).pack(pady=5)
-        ctk.CTkButton(self.sidebar, text="TOTP Generator", width=180, command=self.run_totp_tool).pack(pady=5)
+        ctk.CTkButton(self.sidebar, text="TOTP Generator", width=180, command=self.run_totp_generator).pack(pady=5)
 
         ctk.CTkLabel(self.sidebar, text="Theme:", anchor="w").pack(pady=(30, 5), padx=10)
         self.mode_option = ctk.CTkOptionMenu(self.sidebar, values=["Light", "Dark", "System"], command=self.change_theme)
@@ -98,12 +103,34 @@ class CybrixToolsApp(ctk.CTk):
 
         ctk.CTkButton(self.main_content, text="Analyze Password", command=analyze).pack(pady=5)
 
-    def run_totp_tool(self):
-        totp_path = Path("modules/TOTP/otpapp.py")
-        if totp_path.exists():
-            subprocess.run(["python", str(totp_path)])
-        else:
-            self.show_error("TOTP module not found.")
+    def run_totp_generator(self):
+        for widget in self.main_content.winfo_children():
+            widget.destroy()
+
+        secret = totp_generator.load_secret()
+        if not secret:
+            secret = totp_generator.generate_secret()
+            uri = totp_generator.get_provisioning_uri(secret)
+            qr_img = qrcode.make(uri)
+            with io.BytesIO() as output:
+                qr_img.save(output, format="PNG")
+                image_data = output.getvalue()
+            image = Image.open(io.BytesIO(image_data))
+            photo = ImageTk.PhotoImage(image.resize((200, 200)))
+            img_label = ctk.CTkLabel(self.main_content, image=photo, text="")
+            img_label.image = photo
+            img_label.pack(pady=10)
+
+        code_label = ctk.CTkLabel(self.main_content, text="", font=("Helvetica", 30, "bold"))
+        code_label.pack(pady=20)
+
+        def update_code():
+            while True:
+                code = totp_generator.get_totp_code(secret)
+                code_label.configure(text=f"Current Code: {code}")
+                time.sleep(30)
+
+        threading.Thread(target=update_code, daemon=True).start()
 
     def show_error(self, message):
         for widget in self.main_content.winfo_children():
