@@ -1,4 +1,4 @@
-import pyotp #Add pyotp to pip and req.
+import pyotp
 import json
 from pathlib import Path
 
@@ -48,14 +48,20 @@ def display_totp():
     code = get_totp_code(secret)
     print(f"✅ Your current TOTP code is: {code}")
 
-#Triple quotes is giving issues. Fix later.
+def reset_totp_secret():
+    if SECRET_FILE.exists():
+        SECRET_FILE.unlink()
+        print("✅ TOTP secret has been reset.")
+
 def run_main():
     while True:
-        print("""TOTP Generator
+        print("""
+TOTP Generator
 =======================
 1. First Time Setup
 2. Get TOTP Code
-3. Exit
+3. Reset TOTP Secret
+4. Exit
 """)
         choice = input("Choose an option: ").strip()
         if choice == "1":
@@ -63,6 +69,8 @@ def run_main():
         elif choice == "2":
             display_totp()
         elif choice == "3":
+            reset_totp_secret()
+        elif choice == "4":
             break
         else:
             print("Invalid choice. Try again.")
