@@ -2,7 +2,7 @@ import customtkinter as ctk
 import subprocess
 import os
 from pathlib import Path
-from modules import hash_generator
+from modules import hash_generator, pwd_analyzer
 
 # Set theme
 ctk.set_appearance_mode("Dark")
@@ -54,7 +54,6 @@ class CybrixToolsApp(ctk.CTk):
         self.content_label = ctk.CTkLabel(self.main_content, text="Select a tool from the sidebar", font=("Helvetica", 18))
         self.content_label.place(relx=0.5, rely=0.5, anchor="center")
 
-    #  Hash generator button
     def run_hash_generator(self):
         for widget in self.main_content.winfo_children():
             widget.destroy()
@@ -76,8 +75,28 @@ class CybrixToolsApp(ctk.CTk):
         ctk.CTkButton(self.main_content, text="Generate Hash", command=generate).pack(pady=5)
 
     def run_password_analyzer(self):
-        from modules import pwd_analyzer
-        pwd_analyzer.run_main()
+        for widget in self.main_content.winfo_children():
+            widget.destroy()
+
+        ctk.CTkLabel(self.main_content, text="Password Strength Analyzer", font=("Helvetica", 20, "bold")).pack(pady=10)
+        entry = ctk.CTkEntry(self.main_content, width=400, placeholder_text="Enter your password", show="*")
+        entry.pack(pady=10)
+
+        score_label = ctk.CTkLabel(self.main_content, text="", font=("Helvetica", 16))
+        score_label.pack(pady=10)
+
+        feedback_box = ctk.CTkTextbox(self.main_content, height=150, width=600)
+        feedback_box.pack(pady=10)
+
+        def analyze():
+            password = entry.get()
+            score, feedback = pwd_analyzer.check_password_strength(password)
+            score_label.configure(text=f"Password Strength Score: {score}/10")
+            feedback_box.delete("1.0", "end")
+            for msg in feedback:
+                feedback_box.insert("end", f"- {msg}\n")
+
+        ctk.CTkButton(self.main_content, text="Analyze Password", command=analyze).pack(pady=5)
 
     def run_totp_tool(self):
         totp_path = Path("modules/TOTP/otpapp.py")
