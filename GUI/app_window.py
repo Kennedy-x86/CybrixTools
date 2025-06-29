@@ -1,16 +1,12 @@
 import customtkinter as ctk
-import subprocess
-import os
-from pathlib import Path
 from modules import hash_generator, pwd_analyzer, totp_generator
 import qrcode
-from customtkinter import CTkImage
 from PIL import Image
+from customtkinter import CTkImage
 import io
 import threading
 import time
 
-# Set theme
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("blue")
 
@@ -23,22 +19,28 @@ class CybrixToolsApp(ctk.CTk):
         self.resizable(True, True)
         self.fullscreen = False
 
-        # Grid layout
+        self.tool_placeholders = {
+            'OSINT Lookup': 'Tool coming soon...',
+            'Port Scanner': 'Tool coming soon...',
+            'Encryption/Decryption': 'Tool coming soon...',
+            'HTTP Header Analyzer': 'Tool coming soon...',
+            'DNS Lookup': 'Tool coming soon...',
+            'Hash Comparison Tool': 'Tool coming soon...',
+            'Keylogger (Demo)': 'Tool coming soon...'
+        }
+
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(0, weight=1)
 
-        # Sidebar
         self.sidebar = ctk.CTkFrame(self, width=200, corner_radius=0)
         self.sidebar.grid(row=0, column=0, sticky="ns")
 
-        # Main content
         self.main_content = ctk.CTkFrame(self, corner_radius=10)
         self.main_content.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
 
         self.create_sidebar()
         self.create_default_main_content()
 
-        # Bind F11 to toggle fullscreen
         self.bind("<F11>", self.toggle_fullscreen)
         self.bind("<Escape>", self.exit_fullscreen)
 
@@ -48,6 +50,10 @@ class CybrixToolsApp(ctk.CTk):
         ctk.CTkButton(self.sidebar, text="Hash Generator", width=180, command=self.run_hash_generator).pack(pady=5)
         ctk.CTkButton(self.sidebar, text="Password Analyzer", width=180, command=self.run_password_analyzer).pack(pady=5)
         ctk.CTkButton(self.sidebar, text="TOTP Generator", width=180, command=self.run_totp_generator).pack(pady=5)
+
+        for tool_name in self.tool_placeholders:
+            ctk.CTkButton(self.sidebar, text=tool_name, width=180,
+                         command=lambda name=tool_name: self.load_tool_placeholder(name)).pack(pady=5)
 
         ctk.CTkLabel(self.sidebar, text="Theme:", anchor="w").pack(pady=(30, 5), padx=10)
         self.mode_option = ctk.CTkOptionMenu(self.sidebar, values=["Light", "Dark", "System"], command=self.change_theme)
@@ -61,9 +67,7 @@ class CybrixToolsApp(ctk.CTk):
         self.content_label.place(relx=0.5, rely=0.5, anchor="center")
 
     def run_hash_generator(self):
-        for widget in self.main_content.winfo_children():
-            widget.destroy()
-
+        self.clear_main_content()
         ctk.CTkLabel(self.main_content, text="Hash Generator", font=("Helvetica", 20, "bold")).pack(pady=10)
         entry = ctk.CTkEntry(self.main_content, width=400, placeholder_text="Enter text to hash")
         entry.pack(pady=10)
@@ -81,9 +85,7 @@ class CybrixToolsApp(ctk.CTk):
         ctk.CTkButton(self.main_content, text="Generate Hash", command=generate).pack(pady=5)
 
     def run_password_analyzer(self):
-        for widget in self.main_content.winfo_children():
-            widget.destroy()
-
+        self.clear_main_content()
         ctk.CTkLabel(self.main_content, text="Password Strength Analyzer", font=("Helvetica", 20, "bold")).pack(pady=10)
         entry = ctk.CTkEntry(self.main_content, width=400, placeholder_text="Enter your password", show="*")
         entry.pack(pady=10)
@@ -105,9 +107,7 @@ class CybrixToolsApp(ctk.CTk):
         ctk.CTkButton(self.main_content, text="Analyze Password", command=analyze).pack(pady=5)
 
     def run_totp_generator(self):
-        for widget in self.main_content.winfo_children():
-            widget.destroy()
-
+        self.clear_main_content()
         secret = totp_generator.load_secret()
         if not secret:
             secret = totp_generator.generate_secret()
@@ -116,9 +116,8 @@ class CybrixToolsApp(ctk.CTk):
             with io.BytesIO() as output:
                 qr_img.save(output, format="PNG")
                 image_data = output.getvalue()
-            image = Image.open(io.BytesIO(image_data))
-            resized_image = Image.open(io.BytesIO(image_data)).resize((200, 200))
-            photo = CTkImage(light_image=resized_image, dark_image=resized_image, size=(200, 200))
+            image = Image.open(io.BytesIO(image_data)).resize((200, 200))
+            photo = CTkImage(light_image=image, dark_image=image, size=(200, 200))
             img_label = ctk.CTkLabel(self.main_content, image=photo, text="")
             img_label.pack(pady=10)
 
@@ -141,9 +140,18 @@ class CybrixToolsApp(ctk.CTk):
             totp_generator.SECRET_FILE.unlink()
             self.show_error("TOTP secret has been reset. Click 'TOTP Generator' to set up a new one.")
 
-    def show_error(self, message):
+    def load_tool_placeholder(self, tool_name):
+        self.clear_main_content()
+        message = self.tool_placeholders.get(tool_name, "This tool is under development.")
+        ctk.CTkLabel(self.main_content, text=tool_name, font=("Helvetica", 20, "bold")).pack(pady=20)
+        ctk.CTkLabel(self.main_content, text=message, font=("Helvetica", 16)).pack(pady=10)
+
+    def clear_main_content(self):
         for widget in self.main_content.winfo_children():
             widget.destroy()
+
+    def show_error(self, message):
+        self.clear_main_content()
         error_label = ctk.CTkLabel(self.main_content, text=message, text_color="red", font=("Helvetica", 16))
         error_label.place(relx=0.5, rely=0.5, anchor="center")
 
