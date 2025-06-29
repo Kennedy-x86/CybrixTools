@@ -4,7 +4,8 @@ import os
 from pathlib import Path
 from modules import hash_generator, pwd_analyzer, totp_generator
 import qrcode
-from PIL import Image, ImageTk
+from customtkinter import CTkImage
+from PIL import Image
 import io
 import threading
 import time
@@ -116,9 +117,9 @@ class CybrixToolsApp(ctk.CTk):
                 qr_img.save(output, format="PNG")
                 image_data = output.getvalue()
             image = Image.open(io.BytesIO(image_data))
-            photo = ImageTk.PhotoImage(image.resize((200, 200)))
+            resized_image = Image.open(io.BytesIO(image_data)).resize((200, 200))
+            photo = CTkImage(light_image=resized_image, dark_image=resized_image, size=(200, 200))
             img_label = ctk.CTkLabel(self.main_content, image=photo, text="")
-            img_label.image = photo
             img_label.pack(pady=10)
 
         code_label = ctk.CTkLabel(self.main_content, text="", font=("Helvetica", 30, "bold"))
@@ -131,6 +132,14 @@ class CybrixToolsApp(ctk.CTk):
                 time.sleep(30)
 
         threading.Thread(target=update_code, daemon=True).start()
+
+        reset_button = ctk.CTkButton(self.main_content, text="Reset TOTP Secret", command=self.reset_totp_secret)
+        reset_button.pack(pady=10)
+
+    def reset_totp_secret(self):
+        if totp_generator.SECRET_FILE.exists():
+            totp_generator.SECRET_FILE.unlink()
+            self.show_error("TOTP secret has been reset. Click 'TOTP Generator' to set up a new one.")
 
     def show_error(self, message):
         for widget in self.main_content.winfo_children():
