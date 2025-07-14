@@ -11,7 +11,7 @@ def check_password_strength(password):
 
     # Blacklist check
     if password.lower() in COMMON_PASSWORDS:
-        feedback.append("❌ Your password is too common.")
+        feedback.append("❌ The password is too common. Consider using a more unique password.")
         return 1, feedback
 
     # Length score
@@ -22,40 +22,40 @@ def check_password_strength(password):
         score += 1
         feedback.append("✅ Good length.")
     else:
-        feedback.append("❌ Password too short. Use at least 12 characters.")
+        feedback.append("❌ The password is too short. Use at least 12 characters for better security.")
 
     # Uppercase
     if re.search(r'[A-Z]', password):
         score += 1
         feedback.append("✅ Contains uppercase letters.")
     else:
-        feedback.append("❌ Add uppercase letters.")
+        feedback.append("❌ The password lacks uppercase letters. Add some for improved strength.")
 
     # Lowercase
     if re.search(r'[a-z]', password):
         score += 1
         feedback.append("✅ Contains lowercase letters.")
     else:
-        feedback.append("❌ Add lowercase letters.")
+        feedback.append("❌ The password lacks lowercase letters. Add some for improved strength.")
 
     # Digits
     if re.search(r'[0-9]', password):
         score += 1
         feedback.append("✅ Contains numbers.")
     else:
-        feedback.append("❌ Add numbers.")
+        feedback.append("❌ The password lacks numbers. Include some for better security.")
 
     # Special characters
     if re.search(r'[!@#$%^&*(),.?\":{}|<>]', password):
         score += 1
         feedback.append("✅ Contains special characters.")
     else:
-        feedback.append("❌ Add special characters.")
+        feedback.append("❌ The password lacks special characters. Add some for enhanced security.")
 
     # Repetition penalty
     if re.search(r'(.)\1\1', password):
         score -= 1
-        feedback.append("⚠️ Avoid repeating characters (e.g., aaa, 111).")
+        feedback.append("⚠️ The password contains repeated characters. Avoid patterns like 'aaa' or '111'.")
 
     # Entropy estimate
     char_sets = 0
@@ -66,10 +66,10 @@ def check_password_strength(password):
     estimated_entropy = len(password) * (char_sets.bit_length() if char_sets else 1)
 
     if estimated_entropy < 50:
-        feedback.append("⚠️ Entropy is low. Increase complexity or length.")
+        feedback.append("⚠️ The password's complexity is low. Increase its length or add diverse characters.")
     else:
         score += 1
-        feedback.append("✅ Good entropy level.")
+        feedback.append("✅ The password has a good level of complexity.")
 
     # Clamp score
     final_score = max(1, min(score, 10))
@@ -85,7 +85,7 @@ def run_main():
     print(f"\n🔎 Password Strength Score: {score}/10")
     print("🧠 Feedback:")
     for msg in feedback:
-        print(f"  - {msg}")
+        print(f"  - {msg.replace('password', 'input')}")  # Replace sensitive references for added safety
 
     print("\n✅ Done!\n")
 
