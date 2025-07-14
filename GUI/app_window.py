@@ -3,6 +3,7 @@ from modules import hash_generator, pwd_analyzer, totp_generator, port_scanner
 import qrcode
 from PIL import Image
 from customtkinter import CTkImage
+import tkinter as tk
 import io
 import threading
 import time
@@ -145,9 +146,22 @@ class CybrixToolsApp(ctk.CTk):
         self.clear_main_content()
         ctk.CTkLabel(self.main_content, text="Port Scanner", font=("Helvetica", 20, "bold")).pack(pady=10)
 
-        ip_entry = ctk.CTkEntry(self.main_content, width=300,
-                                placeholder_text="Enter IP or hostname (leave blank to use local IP)")
+        # IP selection radio buttons
+        ip_mode = tk.StringVar(value="own")
+        ctk.CTkRadioButton(self.main_content, text="Scan my own IP", variable=ip_mode, value="own").pack(anchor="w",
+                                                                                                         padx=20)
+        ctk.CTkRadioButton(self.main_content, text="Enter IP or hostname", variable=ip_mode, value="custom").pack(
+            anchor="w", padx=20)
+
+        ip_entry = ctk.CTkEntry(self.main_content, width=300, placeholder_text="Enter IP or hostname")
         ip_entry.pack(pady=5)
+
+        # Port range selection
+        port_mode = tk.StringVar(value="default")
+        ctk.CTkRadioButton(self.main_content, text="Default port range (0–1023)", variable=port_mode,
+                           value="default").pack(anchor="w", padx=20)
+        ctk.CTkRadioButton(self.main_content, text="Specify port range", variable=port_mode, value="custom").pack(
+            anchor="w", padx=20)
 
         start_entry = ctk.CTkEntry(self.main_content, width=150, placeholder_text="Start Port")
         start_entry.pack(pady=5)
@@ -158,23 +172,38 @@ class CybrixToolsApp(ctk.CTk):
         result_box.pack(pady=10)
 
         def scan():
-            ip_input = ip_entry.get().strip()
-            ip = socket.gethostbyname(socket.gethostname()) if not ip_input else ip_input
-
-            try:
-                start_port = int(start_entry.get().strip())
-                end_port = int(end_entry.get().strip())
-                if not (0 <= start_port <= 65535 and 0 <= end_port <= 65535 and start_port <= end_port):
-                    raise ValueError
-            except ValueError:
-                result_box.delete("1.0", "end")
-                result_box.insert("end", "Invalid port range. Ports must be 0–65535 and start <= end.\n")
-                return
-
             result_box.delete("1.0", "end")
+
+            # IP selection
+            if ip_mode.get() == "own":
+                ip = socket.gethostbyname(socket.gethostname())
+            else:
+                ip_input = ip_entry.get().strip()
+                if not ip_input:
+                    result_box.insert("end", "Error: Enter a valid IP or hostname.\n")
+                    return
+                try:
+                    ip = socket.gethostbyname(ip_input)
+                except socket.gaierror:
+                    result_box.insert("end", "Error: Invalid hostname.\n")
+                    return
+
+            # Port range selection
+            if port_mode.get() == "default":
+                start_port, end_port = 0, 1023
+            else:
+                try:
+                    start_port = int(start_entry.get().strip())
+                    end_port = int(end_entry.get().strip())
+                    if not (0 <= start_port <= 65535 and 0 <= end_port <= 65535 and start_port <= end_port):
+                        raise ValueError
+                except ValueError:
+                    result_box.insert("end", "Error: Invalid port range.\n")
+                    return
+
             result_box.insert("end", f"Scanning {ip} from port {start_port} to {end_port}...\n")
 
-            # Run scanning in a thread to keep GUI responsive
+            # Threaded scan
             def threaded_scan():
                 open_ports = port_scanner.scan_ports(ip, start_port, end_port)
                 if open_ports:
@@ -182,7 +211,7 @@ class CybrixToolsApp(ctk.CTk):
                     for port in open_ports:
                         result_box.insert("end", f"- Port {port} is open\n")
                 else:
-                    result_box.insert("end", "\nNo open ports found in this range.\n")
+                    result_box.insert("end", "\nNo open ports found.\n")
 
             threading.Thread(target=threaded_scan, daemon=True).start()
 
