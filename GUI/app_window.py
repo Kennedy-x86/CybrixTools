@@ -1,11 +1,12 @@
 import customtkinter as ctk
-from modules import hash_generator, pwd_analyzer, totp_generator
+from modules import hash_generator, pwd_analyzer, totp_generator, port_scanner
 import qrcode
 from PIL import Image
 from customtkinter import CTkImage
 import io
 import threading
 import time
+import socket
 
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("blue")
@@ -21,7 +22,6 @@ class CybrixToolsApp(ctk.CTk):
 
         self.tool_placeholders = {
             'OSINT Lookup': 'Tool coming soon...',
-            'Port Scanner': 'Tool coming soon...',
             'Encryption/Decryption': 'Tool coming soon...',
             'HTTP Header Analyzer': 'Tool coming soon...',
             'DNS Lookup': 'Tool coming soon...',
@@ -50,6 +50,7 @@ class CybrixToolsApp(ctk.CTk):
         ctk.CTkButton(self.sidebar, text="Hash Generator", width=180, command=self.run_hash_generator).pack(pady=5)
         ctk.CTkButton(self.sidebar, text="Password Analyzer", width=180, command=self.run_password_analyzer).pack(pady=5)
         ctk.CTkButton(self.sidebar, text="TOTP Generator", width=180, command=self.run_totp_generator).pack(pady=5)
+        ctk.CTkButton(self.sidebar, text="Port Scanner", width=180, command=self.run_port_scanner).pack(pady=5)
 
         for tool_name in self.tool_placeholders:
             ctk.CTkButton(self.sidebar, text=tool_name, width=180,
@@ -139,6 +140,53 @@ class CybrixToolsApp(ctk.CTk):
         if totp_generator.SECRET_FILE.exists():
             totp_generator.SECRET_FILE.unlink()
             self.show_error("TOTP secret has been reset. Click 'TOTP Generator' to set up a new one.")
+
+    def run_port_scanner(self):
+        self.clear_main_content()
+        ctk.CTkLabel(self.main_content, text="Port Scanner", font=("Helvetica", 20, "bold")).pack(pady=10)
+
+        ip_entry = ctk.CTkEntry(self.main_content, width=300,
+                                placeholder_text="Enter IP or hostname (leave blank to use local IP)")
+        ip_entry.pack(pady=5)
+
+        start_entry = ctk.CTkEntry(self.main_content, width=150, placeholder_text="Start Port")
+        start_entry.pack(pady=5)
+        end_entry = ctk.CTkEntry(self.main_content, width=150, placeholder_text="End Port")
+        end_entry.pack(pady=5)
+
+        result_box = ctk.CTkTextbox(self.main_content, height=200, width=600)
+        result_box.pack(pady=10)
+
+        def scan():
+            ip_input = ip_entry.get().strip()
+            ip = socket.gethostbyname(socket.gethostname()) if not ip_input else ip_input
+
+            try:
+                start_port = int(start_entry.get().strip())
+                end_port = int(end_entry.get().strip())
+                if not (0 <= start_port <= 65535 and 0 <= end_port <= 65535 and start_port <= end_port):
+                    raise ValueError
+            except ValueError:
+                result_box.delete("1.0", "end")
+                result_box.insert("end", "Invalid port range. Ports must be 0–65535 and start <= end.\n")
+                return
+
+            result_box.delete("1.0", "end")
+            result_box.insert("end", f"Scanning {ip} from port {start_port} to {end_port}...\n")
+
+            # Run scanning in a thread to keep GUI responsive
+            def threaded_scan():
+                open_ports = port_scanner.scan_ports(ip, start_port, end_port)
+                if open_ports:
+                    result_box.insert("end", "\nOpen ports:\n")
+                    for port in open_ports:
+                        result_box.insert("end", f"- Port {port} is open\n")
+                else:
+                    result_box.insert("end", "\nNo open ports found in this range.\n")
+
+            threading.Thread(target=threaded_scan, daemon=True).start()
+
+        ctk.CTkButton(self.main_content, text="Scan", command=scan).pack(pady=10)
 
     def load_tool_placeholder(self, tool_name):
         self.clear_main_content()
