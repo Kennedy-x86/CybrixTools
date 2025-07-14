@@ -1,11 +1,13 @@
 import customtkinter as ctk
-from modules import hash_generator, pwd_analyzer, totp_generator
+from modules import hash_generator, pwd_analyzer, totp_generator, port_scanner
 import qrcode
 from PIL import Image
 from customtkinter import CTkImage
+import tkinter as tk
 import io
 import threading
 import time
+import socket
 
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("blue")
@@ -21,7 +23,6 @@ class CybrixToolsApp(ctk.CTk):
 
         self.tool_placeholders = {
             'OSINT Lookup': 'Tool coming soon...',
-            'Port Scanner': 'Tool coming soon...',
             'Encryption/Decryption': 'Tool coming soon...',
             'HTTP Header Analyzer': 'Tool coming soon...',
             'DNS Lookup': 'Tool coming soon...',
@@ -50,6 +51,7 @@ class CybrixToolsApp(ctk.CTk):
         ctk.CTkButton(self.sidebar, text="Hash Generator", width=180, command=self.run_hash_generator).pack(pady=5)
         ctk.CTkButton(self.sidebar, text="Password Analyzer", width=180, command=self.run_password_analyzer).pack(pady=5)
         ctk.CTkButton(self.sidebar, text="TOTP Generator", width=180, command=self.run_totp_generator).pack(pady=5)
+        ctk.CTkButton(self.sidebar, text="Port Scanner", width=180, command=self.run_port_scanner).pack(pady=5)
 
         for tool_name in self.tool_placeholders:
             ctk.CTkButton(self.sidebar, text=tool_name, width=180,
@@ -139,6 +141,109 @@ class CybrixToolsApp(ctk.CTk):
         if totp_generator.SECRET_FILE.exists():
             totp_generator.SECRET_FILE.unlink()
             self.show_error("TOTP secret has been reset. Click 'TOTP Generator' to set up a new one.")
+
+    def run_port_scanner(self):
+        self.clear_main_content()
+        ctk.CTkLabel(self.main_content, text="Port Scanner", font=("Helvetica", 20, "bold")).pack(pady=10)
+
+        ip_mode = tk.StringVar(value="own")
+        ctk.CTkRadioButton(self.main_content, text="Scan my own IP", variable=ip_mode, value="own").pack(anchor="w",
+                                                                                                         padx=20)
+        ctk.CTkRadioButton(self.main_content, text="Enter IP or hostname", variable=ip_mode, value="custom").pack(
+            anchor="w", padx=20)
+
+        ip_entry = ctk.CTkEntry(self.main_content, width=300, placeholder_text="Enter IP or hostname")
+        ip_entry.pack(pady=5)
+
+        port_mode = tk.StringVar(value="default")
+        ctk.CTkRadioButton(self.main_content, text="Default port range (0–1023)", variable=port_mode,
+                           value="default").pack(anchor="w", padx=20)
+        ctk.CTkRadioButton(self.main_content, text="Specify port range", variable=port_mode, value="custom").pack(
+            anchor="w", padx=20)
+
+        start_entry = ctk.CTkEntry(self.main_content, width=150, placeholder_text="Start Port")
+        start_entry.pack(pady=5)
+        end_entry = ctk.CTkEntry(self.main_content, width=150, placeholder_text="End Port")
+        end_entry.pack(pady=5)
+
+        result_box = ctk.CTkTextbox(self.main_content, height=200, width=600)
+        result_box.pack(pady=10)
+
+        progress_label = ctk.CTkLabel(self.main_content, text="")
+        progress_label.pack(pady=2)
+        progress_bar = ctk.CTkProgressBar(self.main_content, width=400)
+        progress_bar.pack(pady=5)
+        progress_bar.set(0)
+
+        def scan():
+            result_box.delete("1.0", "end")
+            progress_bar.set(0)
+            progress_label.configure(text="")
+
+            if ip_mode.get() == "own":
+                ip = socket.gethostbyname(socket.gethostname())
+            else:
+                ip_input = ip_entry.get().strip()
+                if not ip_input:
+                    result_box.insert("end", "Error: Enter a valid IP or hostname.\n")
+                    return
+                try:
+                    ip = socket.gethostbyname(ip_input)
+                except socket.gaierror:
+                    result_box.insert("end", "Error: Invalid hostname.\n")
+                    return
+
+            if port_mode.get() == "default":
+                start_port, end_port = 0, 1023
+            else:
+                try:
+                    start_port = int(start_entry.get().strip())
+                    end_port = int(end_entry.get().strip())
+                    if not (0 <= start_port <= 65535 and 0 <= end_port <= 65535 and start_port <= end_port):
+                        raise ValueError
+                except ValueError:
+                    result_box.insert("end", "Error: Invalid port range.\n")
+                    return
+
+            result_box.insert("end", f"Scanning {ip} from port {start_port} to {end_port}...\n")
+            total_ports = end_port - start_port + 1
+            completed_ports = [0]  # using a mutable object so threads can update it
+            open_ports = []
+            lock = threading.Lock()
+
+            def scan_and_update(port):
+                if port_scanner.scan_port(ip, port):
+                    with lock:
+                        open_ports.append(port)
+                with lock:
+                    completed_ports[0] += 1
+                    progress = completed_ports[0] / total_ports
+                    progress_bar.set(progress)
+                    progress_label.configure(text=f"Scanning... {int(progress * 100)}%")
+                    self.update_idletasks()
+
+            def threaded_scan():
+                threads = []
+                for port in range(start_port, end_port + 1):
+                    t = threading.Thread(target=scan_and_update, args=(port,))
+                    threads.append(t)
+                    t.start()
+
+                for t in threads:
+                    t.join()
+
+                if open_ports:
+                    result_box.insert("end", "\nOpen ports:\n")
+                    for port in sorted(open_ports):
+                        result_box.insert("end", f"- Port {port} is open\n")
+                else:
+                    result_box.insert("end", "\nNo open ports found.\n")
+
+                progress_label.configure(text="Scan complete")
+
+            threading.Thread(target=threaded_scan, daemon=True).start()
+            
+        ctk.CTkButton(self.main_content, text="Scan", command=scan).pack(pady=10)
 
     def load_tool_placeholder(self, tool_name):
         self.clear_main_content()
