@@ -146,7 +146,6 @@ class CybrixToolsApp(ctk.CTk):
         self.clear_main_content()
         ctk.CTkLabel(self.main_content, text="Port Scanner", font=("Helvetica", 20, "bold")).pack(pady=10)
 
-        # IP selection radio buttons
         ip_mode = tk.StringVar(value="own")
         ctk.CTkRadioButton(self.main_content, text="Scan my own IP", variable=ip_mode, value="own").pack(anchor="w",
                                                                                                          padx=20)
@@ -156,7 +155,6 @@ class CybrixToolsApp(ctk.CTk):
         ip_entry = ctk.CTkEntry(self.main_content, width=300, placeholder_text="Enter IP or hostname")
         ip_entry.pack(pady=5)
 
-        # Port range selection
         port_mode = tk.StringVar(value="default")
         ctk.CTkRadioButton(self.main_content, text="Default port range (0–1023)", variable=port_mode,
                            value="default").pack(anchor="w", padx=20)
@@ -171,10 +169,17 @@ class CybrixToolsApp(ctk.CTk):
         result_box = ctk.CTkTextbox(self.main_content, height=200, width=600)
         result_box.pack(pady=10)
 
+        progress_label = ctk.CTkLabel(self.main_content, text="")
+        progress_label.pack(pady=2)
+        progress_bar = ctk.CTkProgressBar(self.main_content, width=400)
+        progress_bar.pack(pady=5)
+        progress_bar.set(0)
+
         def scan():
             result_box.delete("1.0", "end")
+            progress_bar.set(0)
+            progress_label.configure(text="")
 
-            # IP selection
             if ip_mode.get() == "own":
                 ip = socket.gethostbyname(socket.gethostname())
             else:
@@ -188,7 +193,6 @@ class CybrixToolsApp(ctk.CTk):
                     result_box.insert("end", "Error: Invalid hostname.\n")
                     return
 
-            # Port range selection
             if port_mode.get() == "default":
                 start_port, end_port = 0, 1023
             else:
@@ -202,16 +206,26 @@ class CybrixToolsApp(ctk.CTk):
                     return
 
             result_box.insert("end", f"Scanning {ip} from port {start_port} to {end_port}...\n")
+            total_ports = end_port - start_port + 1
 
-            # Threaded scan
             def threaded_scan():
-                open_ports = port_scanner.scan_ports(ip, start_port, end_port)
+                open_ports = []
+                for i, port in enumerate(range(start_port, end_port + 1)):
+                    if port_scanner.scan_port(ip, port):
+                        open_ports.append(port)
+                    progress = (i + 1) / total_ports
+                    progress_bar.set(progress)
+                    progress_label.configure(text=f"Scanning port {port} ({int(progress * 100)}%)")
+                    self.update_idletasks()
+
                 if open_ports:
                     result_box.insert("end", "\nOpen ports:\n")
                     for port in open_ports:
                         result_box.insert("end", f"- Port {port} is open\n")
                 else:
                     result_box.insert("end", "\nNo open ports found.\n")
+
+                progress_label.configure(text="Scan complete")
 
             threading.Thread(target=threaded_scan, daemon=True).start()
 
