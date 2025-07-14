@@ -3,4 +3,4 @@ cryptography==44.0.0
 pycparser==2.22
 pyotp==2.9.0
 customtkinter==5.2.2
-pillow==11.2.1
+pillow==11.3.0
