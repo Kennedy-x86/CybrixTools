@@ -59,13 +59,25 @@ def run_main():
         print("Invalid option. Exiting.")
         return
 
-    try:
-        port_start = int(input("Enter starting port: "))
-        port_end = int(input("Enter ending port: "))
-        if port_start < 0 or port_end > 65535 or port_start > port_end:
-            raise ValueError
-    except ValueError:
-        print("Invalid port range. Must be between 0 and 65535.")
+    print("\nPort Range Options:")
+    print("1. Use default range (0 - 1023)")
+    print("2. Specify custom port range")
+    range_choice = input("Choose an option (1 or 2): ").strip()
+
+    if range_choice == "1":
+        port_start = 0
+        port_end = 1023
+    elif range_choice == "2":
+        try:
+            port_start = int(input("Enter starting port: "))
+            port_end = int(input("Enter ending port: "))
+            if port_start < 0 or port_end > 65535 or port_start > port_end:
+                raise ValueError
+        except ValueError:
+            print("Invalid port range. Must be between 0 and 65535.")
+            return
+    else:
+        print("Invalid option. Exiting.")
         return
 
     print(f"\nScanning {target_ip} from port {port_start} to {port_end}...\n")
