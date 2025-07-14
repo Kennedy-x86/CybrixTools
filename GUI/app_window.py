@@ -207,20 +207,34 @@ class CybrixToolsApp(ctk.CTk):
 
             result_box.insert("end", f"Scanning {ip} from port {start_port} to {end_port}...\n")
             total_ports = end_port - start_port + 1
+            completed_ports = [0]  # using a mutable object so threads can update it
+            open_ports = []
+            lock = threading.Lock()
+
+            def scan_and_update(port):
+                if port_scanner.scan_port(ip, port):
+                    with lock:
+                        open_ports.append(port)
+                with lock:
+                    completed_ports[0] += 1
+                    progress = completed_ports[0] / total_ports
+                    progress_bar.set(progress)
+                    progress_label.configure(text=f"Scanning... {int(progress * 100)}%")
+                    self.update_idletasks()
 
             def threaded_scan():
-                open_ports = []
-                for i, port in enumerate(range(start_port, end_port + 1)):
-                    if port_scanner.scan_port(ip, port):
-                        open_ports.append(port)
-                    progress = (i + 1) / total_ports
-                    progress_bar.set(progress)
-                    progress_label.configure(text=f"Scanning port {port} ({int(progress * 100)}%)")
-                    self.update_idletasks()
+                threads = []
+                for port in range(start_port, end_port + 1):
+                    t = threading.Thread(target=scan_and_update, args=(port,))
+                    threads.append(t)
+                    t.start()
+
+                for t in threads:
+                    t.join()
 
                 if open_ports:
                     result_box.insert("end", "\nOpen ports:\n")
-                    for port in open_ports:
+                    for port in sorted(open_ports):
                         result_box.insert("end", f"- Port {port} is open\n")
                 else:
                     result_box.insert("end", "\nNo open ports found.\n")
@@ -228,7 +242,7 @@ class CybrixToolsApp(ctk.CTk):
                 progress_label.configure(text="Scan complete")
 
             threading.Thread(target=threaded_scan, daemon=True).start()
-
+            
         ctk.CTkButton(self.main_content, text="Scan", command=scan).pack(pady=10)
 
     def load_tool_placeholder(self, tool_name):
