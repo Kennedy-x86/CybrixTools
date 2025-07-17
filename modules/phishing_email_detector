@@ -1,1 +1,40 @@
+#!/usr/bin/python3
+import re
 
+#Phishing keywords
+suspicious_keywords =[
+    "urgent", "suspended", "click here", "deleted"
+]
+
+def check_email(email):
+    """
+    Checks email for any phishing attempts based on keywords
+    """
+
+    findings = []
+    email_lower = email.lower()
+
+    #Check for phishing attempts
+    for keyword in suspicious_keywords:
+        if keyword in email_lower:
+            findings.append(f"Phishing attempt found: '{keyword}'")
+
+    if len(findings) >= 1:
+        findings.append("This is likely a phishing email")
+    else:
+        findings.append("This email is safe")
+
+    return findings
+
+def main():
+    print("Phishing Email Detector for Cybrix Tools")
+    email_text = input("Enter email: ")
+
+    findings = check_email(email_text)
+
+    print("\nEmail Result")
+    for f in findings:
+            print(f" - {f}")
+
+if __name__ == "__main__":
+    main()
