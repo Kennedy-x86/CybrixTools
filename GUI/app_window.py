@@ -52,6 +52,7 @@ class CybrixToolsApp(ctk.CTk):
         ctk.CTkButton(self.sidebar, text="Password Analyzer", width=180, command=self.run_password_analyzer).pack(pady=5)
         ctk.CTkButton(self.sidebar, text="TOTP Generator", width=180, command=self.run_totp_generator).pack(pady=5)
         ctk.CTkButton(self.sidebar, text="Port Scanner", width=180, command=self.run_port_scanner).pack(pady=5)
+        ctk.CTkButton(self.sidebar,text="Phishing Detector", width=180, command=self.run_phishing_detector).pack(pady=5)
 
         for tool_name in self.tool_placeholders:
             ctk.CTkButton(self.sidebar, text=tool_name, width=180,
@@ -244,6 +245,28 @@ class CybrixToolsApp(ctk.CTk):
             threading.Thread(target=threaded_scan, daemon=True).start()
             
         ctk.CTkButton(self.main_content, text="Scan", command=scan).pack(pady=10)
+
+#Phishing Detector
+def run_phishing_detector(self):
+    self.clear_main_content()
+    ctk.CTkLabel (self.main_content, text="Phishing Email Detector", font=("Helvetica", 20, "bold")).pack(pady=10)
+
+    entry = ctk.CTkTextbox(self.main_content, height=200, width=600)
+    entry.pack(pady=10)
+    entry.insert("1.0", "Enter email")
+
+    result_box = ctk.CTkTextbox(self.main_content, height=150, width=600)
+    result_box.pack(pady=10)
+
+    def analyze():
+        email = entry.get("1.0", "end")
+        from modules import phishing_detector
+        findings = phishing_detector.check_email(email)
+        result_box.delete("1.0", "end")
+        for finding in findings:
+            result_box.insert("end", f" - {finding}\n")
+
+    ctk.CTkButton(self.main_content, text="Analyze Email", command=analyze).pack(pady=5)
 
     def load_tool_placeholder(self, tool_name):
         self.clear_main_content()
