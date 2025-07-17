@@ -1,13 +1,15 @@
 import customtkinter as ctk
-from modules import hash_generator, pwd_analyzer, totp_generator, port_scanner
+from modules import hash_generator, pwd_analyzer, totp_generator, port_scanner, steganography_detector
 import qrcode
-from PIL import Image
+from PIL import Image, ImageTK
 from customtkinter import CTkImage
 import tkinter as tk
 import io
 import threading
 import time
 import socket
+import numpy as np
+import tkinter.filedialog as fd
 
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("blue")
@@ -52,7 +54,8 @@ class CybrixToolsApp(ctk.CTk):
         ctk.CTkButton(self.sidebar, text="Password Analyzer", width=180, command=self.run_password_analyzer).pack(pady=5)
         ctk.CTkButton(self.sidebar, text="TOTP Generator", width=180, command=self.run_totp_generator).pack(pady=5)
         ctk.CTkButton(self.sidebar, text="Port Scanner", width=180, command=self.run_port_scanner).pack(pady=5)
-
+        ctk.CTkButton(self.sidebar, text="Steganography Detector", width=180, command=self.run_steganography_detector).pack(pady=5)
+        
         for tool_name in self.tool_placeholders:
             ctk.CTkButton(self.sidebar, text=tool_name, width=180,
                          command=lambda name=tool_name: self.load_tool_placeholder(name)).pack(pady=5)
@@ -141,6 +144,42 @@ class CybrixToolsApp(ctk.CTk):
         if totp_generator.SECRET_FILE.exists():
             totp_generator.SECRET_FILE.unlink()
             self.show_error("TOTP secret has been reset. Click 'TOTP Generator' to set up a new one.")
+
+#Steganography Detector
+def run_steganography_detector(self):
+    self.clear_main_content()
+    ctk.CTkLabel(self.main_content, text="Steganography Detector", font=("Helvetica", 20, "bold")).pack(pady=10)
+
+    image_label = ctk.CTkLabel(self.main_content, text="No image chosen")
+    image_label.pack(pady=10)
+
+    result_box = ctk.CTkTextbox(self.main_content, height=200, width=600)
+    result_box.pack(pady=10)
+
+
+    def select_file():
+        file_path = fd.askopenfilename(
+            title="Choose image",
+            filetypes=[("File types", "*.png *.jpg *.jpeg")]
+        )
+        if not file_path:
+            return
+
+        img = Image.open(file_path)
+        img.thumbnail((300, 300))
+        photo = ImageTk.PhotoImage(img)
+        image_label.configure(image=photo, text="")
+        image_label.image = photo
+
+        likelihood, findings = steganography_detector.check_upload(file_path)
+
+        result_box.delete("1.0", "end")
+        for line in findings:
+            result_box.insert("end", f"{line}\n")
+        result_box.insert("end", f"\nChances: {likelihood*100:.2f}%")
+
+    select_btn = ctk.CTkButton(self.main_content, text="Choose image", command=select_file)
+    select_btn.pack(pady=10)
 
     def run_port_scanner(self):
         self.clear_main_content()
