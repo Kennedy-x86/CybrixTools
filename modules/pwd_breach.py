@@ -2,12 +2,12 @@ def hash_pash(password):
   sha1=hashlib.sha1(password.encode('utf-8')).hexdigest().upper()
   return sha1[:5], sha1[5:]
 
-def check_owned(password):
-  head, tail=has_pash(password)
+def check_pwned(password):
+  head, tail=hash_pash(password)
   url=f"https://api.pwnedpasswords.com/range/{head}"
   res=requests.get(url)
-  if res.status_code 1= 200:
-    raise Connection Error("Error connecting to API")
+  if res.status_code != 200:
+    raise ConnectionError("Error connecting to API")
 
   hashes=(line.split(':') for line in res.text.splitlines())
   for h, count in hashes:
