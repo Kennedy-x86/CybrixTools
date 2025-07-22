@@ -1,5 +1,5 @@
 import customtkinter as ctk
-from modules import hash_generator, pwd_analyzer, totp_generator, port_scanner, steganography_detector
+from modules import hash_generator, pwd_analyzer, totp_generator, port_scanner, phishing_email_detector, steganography_detector
 import qrcode
 from PIL import Image, ImageTK
 from customtkinter import CTkImage
@@ -13,6 +13,7 @@ import tkinter.filedialog as fd
 
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("blue")
+
 
 class CybrixToolsApp(ctk.CTk):
     def __init__(self):
@@ -54,21 +55,25 @@ class CybrixToolsApp(ctk.CTk):
         ctk.CTkButton(self.sidebar, text="Password Analyzer", width=180, command=self.run_password_analyzer).pack(pady=5)
         ctk.CTkButton(self.sidebar, text="TOTP Generator", width=180, command=self.run_totp_generator).pack(pady=5)
         ctk.CTkButton(self.sidebar, text="Port Scanner", width=180, command=self.run_port_scanner).pack(pady=5)
+        ctk.CTkButton(self.sidebar, text="Phishing Detector", width=180, command=self.run_phishing_detector).pack(pady=5)
         ctk.CTkButton(self.sidebar, text="Steganography Detector", width=180, command=self.run_steganography_detector).pack(pady=5)
         
         for tool_name in self.tool_placeholders:
             ctk.CTkButton(self.sidebar, text=tool_name, width=180,
-                         command=lambda name=tool_name: self.load_tool_placeholder(name)).pack(pady=5)
+                          command=lambda name=tool_name: self.load_tool_placeholder(name)).pack(pady=5)
 
         ctk.CTkLabel(self.sidebar, text="Theme:", anchor="w").pack(pady=(30, 5), padx=10)
-        self.mode_option = ctk.CTkOptionMenu(self.sidebar, values=["Light", "Dark", "System"], command=self.change_theme)
+        self.mode_option = ctk.CTkOptionMenu(self.sidebar, values=["Light", "Dark", "System"],
+                                             command=self.change_theme)
         self.mode_option.set("Dark")
         self.mode_option.pack(padx=10)
+
 
     def create_default_main_content(self):
         for widget in self.main_content.winfo_children():
             widget.destroy()
-        self.content_label = ctk.CTkLabel(self.main_content, text="Select a tool from the sidebar", font=("Helvetica", 18))
+        self.content_label = ctk.CTkLabel(self.main_content, text="Select a tool from the sidebar",
+                                          font=("Helvetica", 18))
         self.content_label.place(relx=0.5, rely=0.5, anchor="center")
 
     def run_hash_generator(self):
@@ -281,8 +286,34 @@ def run_steganography_detector(self):
                 progress_label.configure(text="Scan complete")
 
             threading.Thread(target=threaded_scan, daemon=True).start()
-            
+
         ctk.CTkButton(self.main_content, text="Scan", command=scan).pack(pady=10)
+
+    def run_phishing_detector(self):
+        self.clear_main_content()
+        ctk.CTkLabel(self.main_content, text="Phishing Email Detector", font=("Helvetica", 20, "bold")).pack(pady=10)
+
+        email_entry = ctk.CTkTextbox(self.main_content, width=700, height=200)
+        email_entry.insert("1.0", "Paste phishing email text here...")
+        email_entry.pack(pady=10)
+
+        result_box = ctk.CTkTextbox(self.main_content, width=700, height=180)
+        result_box.insert("1.0", "Results will be displayed here...")
+        result_box.pack(pady=10)
+
+        def analyze_email():
+            from modules import phishing_email_detector  # Ensure correct import
+
+            email_text = email_entry.get("1.0", "end").strip()
+            result = phishing_email_detector.check_email(email_text)
+
+            result_box.delete("1.0", "end")
+            result_box.insert("end", f"Risk Score: {result['score']}%\n")
+            result_box.insert("end", f"Verdict: {result['verdict']}\n\n")
+            for match in result["matches"]:
+                result_box.insert("end", f"{match}\n")
+
+        ctk.CTkButton(self.main_content, text="Analyze Email", command=analyze_email).pack(pady=10)
 
     def load_tool_placeholder(self, tool_name):
         self.clear_main_content()
@@ -309,6 +340,7 @@ def run_steganography_detector(self):
     def exit_fullscreen(self, event=None):
         self.fullscreen = False
         self.attributes("-fullscreen", False)
+
 
 if __name__ == "__main__":
     app = CybrixToolsApp()
