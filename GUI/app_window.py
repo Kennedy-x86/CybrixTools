@@ -50,8 +50,7 @@ class CybrixToolsApp(ctk.CTk):
         ctk.CTkLabel(self.sidebar, text="CybrixTools", font=("Helvetica", 20, "bold")).pack(pady=(20, 10))
 
         ctk.CTkButton(self.sidebar, text="Hash Generator", width=180, command=self.run_hash_generator).pack(pady=5)
-        ctk.CTkButton(self.sidebar, text="Password Analyzer", width=180, command=self.run_password_analyzer).pack(
-            pady=5)
+        ctk.CTkButton(self.sidebar, text="Password Analyzer", width=180, command=self.run_password_analyzer).pack(pady=5)
         ctk.CTkButton(self.sidebar, text="TOTP Generator", width=180, command=self.run_totp_generator).pack(pady=5)
         ctk.CTkButton(self.sidebar, text="Port Scanner", width=180, command=self.run_port_scanner).pack(pady=5)
         ctk.CTkButton(self.sidebar, text="Phishing Detector", width=180, command=self.run_phishing_detector).pack(pady=5)
@@ -65,6 +64,7 @@ class CybrixToolsApp(ctk.CTk):
                                              command=self.change_theme)
         self.mode_option.set("Dark")
         self.mode_option.pack(padx=10)
+
 
     def create_default_main_content(self):
         for widget in self.main_content.winfo_children():
@@ -254,21 +254,27 @@ class CybrixToolsApp(ctk.CTk):
         self.clear_main_content()
         ctk.CTkLabel(self.main_content, text="Phishing Email Detector", font=("Helvetica", 20, "bold")).pack(pady=10)
 
-        input_box = ctk.CTkTextbox(self.main_content, height=200, width=600)
-        input_box.pack(pady=10)
-        input_box.insert("1.0", "Paste email content here...")
+        email_entry = ctk.CTkTextbox(self.main_content, width=700, height=200)
+        email_entry.insert("1.0", "Paste phishing email text here...")
+        email_entry.pack(pady=10)
 
-        result_box = ctk.CTkTextbox(self.main_content, height=100, width=600)
+        result_box = ctk.CTkTextbox(self.main_content, width=700, height=180)
+        result_box.insert("1.0", "Results will be displayed here...")
         result_box.pack(pady=10)
 
-        def analyze():
-            email_text = input_box.get("1.0", "end").strip()
-            results = phishing_email_detector.check_email(email_text)
-            result_box.delete("1.0", "end")
-            for r in results:
-                result_box.insert("end", f"{r}\n")
+        def analyze_email():
+            from modules import phishing_email_detector  # Ensure correct import
 
-        ctk.CTkButton(self.main_content, text="Analyze Email", command=analyze).pack(pady=10)
+            email_text = email_entry.get("1.0", "end").strip()
+            result = phishing_email_detector.check_email(email_text)
+
+            result_box.delete("1.0", "end")
+            result_box.insert("end", f"Risk Score: {result['score']}%\n")
+            result_box.insert("end", f"Verdict: {result['verdict']}\n\n")
+            for match in result["matches"]:
+                result_box.insert("end", f"{match}\n")
+
+        ctk.CTkButton(self.main_content, text="Analyze Email", command=analyze_email).pack(pady=10)
 
     def load_tool_placeholder(self, tool_name):
         self.clear_main_content()
