@@ -1,5 +1,5 @@
 import customtkinter as ctk
-from modules import hash_generator, pwd_analyzer, totp_generator, port_scanner
+from modules import hash_generator, pwd_analyzer, totp_generator, port_scanner, encryptdecrypt
 import qrcode
 from PIL import Image
 from customtkinter import CTkImage
@@ -8,6 +8,10 @@ import io
 import threading
 import time
 import socket
+import base64
+import tkinter.messagebox as mb
+import tkinter.filedialog as fd
+import customtkinter as ctk
 
 ctk.set_appearance_mode("Dark")
 ctk.set_default_color_theme("blue")
@@ -52,7 +56,9 @@ class CybrixToolsApp(ctk.CTk):
         ctk.CTkButton(self.sidebar, text="Password Analyzer", width=180, command=self.run_password_analyzer).pack(pady=5)
         ctk.CTkButton(self.sidebar, text="TOTP Generator", width=180, command=self.run_totp_generator).pack(pady=5)
         ctk.CTkButton(self.sidebar, text="Port Scanner", width=180, command=self.run_port_scanner).pack(pady=5)
+        ctk.CTkButton(self.sidebar, text="Encrypt/Decrypt", width=180, command=self.run_encryptdecrypt).pack(pady=5)
 
+        
         for tool_name in self.tool_placeholders:
             ctk.CTkButton(self.sidebar, text=tool_name, width=180,
                          command=lambda name=tool_name: self.load_tool_placeholder(name)).pack(pady=5)
@@ -85,6 +91,101 @@ class CybrixToolsApp(ctk.CTk):
                 result_box.insert("end", f"{algo}: {h}\n")
 
         ctk.CTkButton(self.main_content, text="Generate Hash", command=generate).pack(pady=5)
+
+#run encryptdecrypt.py
+def run_encryptdecrypt(self):
+    self.clear_main_content()
+    ctk.CTkLabel(self.main_content, text="Encryption/Decryption Tool", font=("Helvetica", 20, "bold")).pack(pady=10)
+
+    ctk.CTkLabel(self.main_content, text="Input").pack(anchor="w", padx=10)
+    self.input_box = ctk.CTkTextbox(self.main_content, height=100, width=700)
+    self.input_box.pack(pady=5)
+
+    ctk.CTkLabel(self.main_content, text="Password:").pack(anchor="w", padx=10)
+    self.enterpw = ctk.CTkEntry(self.main_content, width=400, show="*")
+    self.enterpw.pack(pady=5)
+
+    ctk.CTkLabel(self.main_content, text="Output:").pack(anchor="w", padx=10)
+    self.output_box = ctk.CTkTextbox(self.main_content, height=100, width=700)
+    self.output_box.pack(pady=5)
+
+    btn_frame = ctk.CTkFrame(self.main_content)
+    btn_frame.pack(pady=10)
+
+    ctk.CTkButton(btn_frame, text="Text file loaded", command=lambda: load_file(self)).grid(row=0, column=0, padx=5)
+    ctk.CTkButton(btn_frame, text="Encrypt", command=lambda: encrypt_text(self)).grid(row=0, column=1, padx=5)
+    ctk.CTkButton(btn_frame, text="Decrypt", command=lambda: decrypt_text(self)).grid(row=0, column=2, padx=5)
+    ctk.CTkButton(btn_frame, text="Save encrypted file", command=lambda: save_encrypted_file(self)).grid(row=0, column=3, padx=5)
+
+def encrypt_text(self):
+    plaintext = self.input_box.get("1.0", "end-1c").encode()
+    password = self.enterpw.get()
+    if not plaintext:
+        mb.showerror("Incorrect input", "Enter text.")
+        return
+    if not password:
+        mb.showerror("Incorrect input", "Enter password")
+        return
+    try:
+        key = encryptdecrypt.derive_key(password)
+        ciphertext = encryptdecrypt.encrypt_data(key, plaintext)
+        cipher_b64 = base64.b64encode(ciphertext).decode()
+
+        self.output_box.delete("1.0", "end")
+        self.output_box.insert("end", cipher_b64)
+    except Exception as e:
+        mb.showerror("Incorrect encryption", str(e))
+
+def decrypt_text(self):
+    cipher_b64 = self.input_box.get("1.0", "end-1c")
+    password = self.enterpw.get()
+
+    if not cipher_b64:
+        mb.showerror("Incorrect input", "Enter text.")
+        return
+    if not password:
+        mb.showerror("Incorrect input", "Enter password")
+        return
+
+    try:
+        ciphertext = base64.b64decode(cipher_b64)
+        key = encryptdecrypt.derive_key(password)
+        plaintext = encryptdecrypt.decrypt_data(key, ciphertext)
+
+        self.output_box.delete("1.0", "end")
+        self.output_box.insert("end", plaintext.decode(errors="replace"))
+    except Exception as e:
+        mb.showerror("Incorrect decryption", str(e))
+
+def load_file(self):
+    path = fd.askopenfilename(title="Choose text file")
+    if not path:
+        return
+
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            data = f.read()
+        self.input_box.delete("1.0", "end")
+        self.input_box.insert("end", data)
+    except Exception as e:
+        mb.showerror("Error loading file", str(e))
+
+def save_encrypted_file(self):
+    cipher_b64 = self.output_box.get("1.0", "end-1c")
+    if not cipher_b64:
+        mb.showerror("Error saving", "No ciphertext found")
+        return
+
+    path = fd.asksaveasfilename(defaultextension=".enc", filetypes=[("Files encrypted", "*.enc"), ("All files", "*.*")])
+    if not path:
+        return
+
+    try:
+        ciphertext = base64.b64decode(cipher_b64)
+        encryptdecrypt.save_encrypted(path, ciphertext)
+        mb.showinfo("Successful", f"Saved encrypted file: {path}")
+    except Exception as e:
+        mb.showerror("Error saving", str(e))
 
     def run_password_analyzer(self):
         self.clear_main_content()
