@@ -9,6 +9,11 @@ def check_password_strength(password):
     score = 0
     feedback = []
 
+    # Handle empty password
+    if not password:
+        feedback.append("❌ Password cannot be empty.")
+        return 0, feedback
+
     # Blacklist check
     if password.lower() in COMMON_PASSWORDS:
         feedback.append("❌ The password is too common. Consider using a more unique password.")
