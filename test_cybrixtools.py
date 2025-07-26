@@ -214,12 +214,9 @@ def test_port_scanner(results):
         closed_result = port_scanner.scan_port("127.0.0.1", 9999)
         results.add_test("Port scanner - closed port", not closed_result)
         
-        # Test invalid IP handling
-        try:
-            port_scanner.scan_port("invalid.ip.address", 80)
-            results.add_test("Port scanner - invalid IP handling", False, "Should handle invalid IP")
-        except Exception:
-            results.add_test("Port scanner - invalid IP handling", True)
+        # Test invalid IP handling (should return False, not raise exception)
+        invalid_result = port_scanner.scan_port("invalid.ip.address", 80)
+        results.add_test("Port scanner - invalid IP handling", not invalid_result)
         
     except Exception as e:
         results.add_test("Port scanner module", False, str(e))
